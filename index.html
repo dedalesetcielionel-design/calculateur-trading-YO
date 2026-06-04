@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>COPY-TRADING</title>
+  <style>
+    :root {
+      --bg1: #0f172a;
+      --bg2: #1e293b;
+      --panel: rgba(17, 24, 39, 0.94);
+      --card: rgba(31, 41, 55, 0.98);
+      --line: #334155;
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --green: #22c55e;
+      --greenText: #86efac;
+      --blue: #38bdf8;
+      --yellow: #fde68a;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(160deg, var(--bg1), #111827 52%, var(--bg2));
+      color: var(--text);
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      padding: max(14px, env(safe-area-inset-top)) 12px max(18px, env(safe-area-inset-bottom));
+    }
+
+    .app {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      line-height: 1.1;
+      letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .install-tip {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      color: #dbeafe;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .field {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 14px;
+      color: #e2e8f0;
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.35;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      border: 1px solid #475569;
+      border-radius: 12px;
+      background: #0f172a;
+      color: #fff;
+      font-size: 18px;
+      padding: 14px 12px;
+      min-height: 48px;
+      outline: none;
+    }
+
+    .field select {
+      cursor: pointer;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+      padding-right: 36px;
+    }
+
+    .field input:focus, .field select:focus {
+      border-color: var(--blue);
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    button {
+      min-height: 50px;
+      border: 0;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 12px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-primary { background: var(--green); color: #052e16; }
+    .btn-secondary { background: var(--blue); color: #082f49; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .summary-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .summary-card .label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .summary-card .value {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.15;
+      word-break: break-word;
+    }
+
+    .desktop-table {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: auto;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+    }
+
+    table {
+      width: 100%;
+      min-width: 1040px;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #182334;
+      color: #fff;
+      padding: 14px 10px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: center;
+    }
+
+    tbody td {
+      padding: 12px 10px;
+      border-bottom: 1px solid rgba(71, 85, 105, 0.45);
+      text-align: center;
+      font-size: 15px;
+    }
+
+    tbody tr:nth-child(even) { background: rgba(30, 41, 59, 0.5); }
+
+    .mobile-list {
+      display: none;
+      gap: 12px;
+    }
+
+    .day-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .day-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--yellow);
+      margin-bottom: 10px;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 12px;
+      align-items: start;
+    }
+
+    .k {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.3;
+    }
+
+    .v {
+      text-align: right;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .gain-brut { color: #93c5fd; }
+    .gain-net { color: var(--greenText); }
+    .blank { color: #94a3b8; font-style: italic; }
+
+    .note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1024px) {
+      .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      body { padding-left: 10px; padding-right: 10px; }
+      h1 { font-size: 26px; }
+      .panel { padding: 14px; border-radius: 18px; }
+      .buttons { grid-template-columns: 1fr; }
+      .desktop-table { display: none; }
+      .mobile-list { display: grid; }
+      .field input, .field select { font-size: 18px; }
+    }
+
+    @media (max-width: 600px) {
+      .controls { grid-template-columns: 1fr; }
+      .summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel">
+      <h1>COPY-TRADING</h1>
+      <div class="subtitle">
+        Application de simulation par périodes mensuelles (20 jours de semaine / ouvrés par mois) avec effet multiplicateur x24 sur la balance.
+        La balance évolue avec le gain brut du jour multiplié par 24. Le gain net affiche le brut avec une déduction de 30 %.
+      </div>
+      <div class="install-tip">
+        Sur iPhone 11 : ouvrez ce fichier dans Safari, puis utilisez <strong>Partager</strong> → <strong>Sur l’écran d’accueil</strong> pour le lancer comme une application.
+      </div>
+
+      <div class="controls">
+        <div class="field">
+          <label for="rateInput">PROFITS TRADING Taux moyen par jour (%)</label>
+          <input id="rateInput" type="text" inputmode="decimal" value="0,045" placeholder="Exemple : 0,045" />
+        </div>
+        <div class="field">
+          <label for="depositInput">Dépôt investi ($)</label>
+          <input id="depositInput" type="text" inputmode="decimal" value="250" placeholder="Exemple : 250" />
+        </div>
+        <div class="field">
+          <label for="monthsInput">Durée de simulation (mois)</label>
+          <input id="monthsInput" type="number" inputmode="numeric" min="1" max="60" value="12" />
+        </div>
+        <div class="field">
+          <label for="monthSelect">Mois à afficher</label>
+          <select id="monthSelect" onchange="renderActiveMonth()"></select>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="btn-primary" onclick="generateTable()">Calculer</button>
+        <button class="btn-secondary" onclick="resetDefaults()">Remettre l’exemple</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="summary" id="summary"></div>
+    </div>
+
+    <div class="desktop-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Jour (Semaine)</th>
+            <th>PROFITS TRADING Taux moyen par jour</th>
+            <th>Dépôt investi</th>
+            <th>Balance amplifiée TM</th>
+            <th>RSI</th>
+            <th>Gains Brut</th>
+            <th>Gains Net</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="mobile-list" id="mobileList"></div>
+
+    <div class="panel">
+      <div class="note">
+        Exemple : dépôt de 250 $, balance de départ 6 000 $. Si le gain brut du jour vaut 2,70 $, le capital total augmente alors de 2,70 $ pour afficher 6 002,70 $, tandis que la balance amplifiée augmente de 45,36 $ car le gain net de 1,89 $ est amplifié 24 fois.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let simulationData = [];
+    let totalMonths = 12;
+
+    function parseFrenchNumber(value) {
+      if (typeof value !== 'string') value = String(value);
+      const cleaned = value.replace(/\s/g, '').replace(/\$/g, '').replace(/,/g, '.');
+      const number = parseFloat(cleaned);
+      return isNaN(number) ? 0 : number;
+    }
+
+    function formatCurrency(value) {
+      return value.toLocaleString('fr-FR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }) + ' $';
+    }
+
+    function formatPercent(value) {
+      return value.toLocaleString('fr-FR', {
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 6
+      }) + ' %';
+    }
+
+    function addDesktopRow(html) {
+      document.getElementById('tableBody').insertAdjacentHTML('beforeend', html);
+    }
+
+    function addMobileCard(dayLabel, ratePercent, deposit, balance, brutGain, netGain, isStart) {
+      const rsiText = '—';
+      const brutText = isStart ? '—' : formatCurrency(brutGain);
+      const netText = isStart ? '—' : formatCurrency(netGain);
+      const card = `
+        <div class="day-card">
+          <div class="day-title">${dayLabel}</div>
+          <div class="kv">
+            <div class="k">PROFITS TRADING Taux moyen par jour</div>
+            <div class="v">${formatPercent(ratePercent)}</div>
+
+            <div class="k">Dépôt investi</div>
+            <div class="v">${formatCurrency(deposit)}</div>
+            <div class="k">Balance amplifiée TM</div>
+            <div class="v">${formatCurrency(balance)}</div>
+
+            <div class="k">RSI</div>
+            <div class="v blank">${rsiText}</div>
+
+            <div class="k">Gains Brut</div>
+            <div class="v ${isStart ? 'blank' : 'gain-brut'}">${brutText}</div>
+
+            <div class="k">Gains Net</div>
+            <div class="v ${isStart ? 'blank' : 'gain-net'}">${netText}</div>
+          </div>
+        </div>
+      `;
+      document.getElementById('mobileList').insertAdjacentHTML('beforeend', card);
+    }
+
+    function generateTable() {
+      const ratePercent = parseFrenchNumber(document.getElementById('rateInput').value);
+      const deposit = parseFrenchNumber(document.getElementById('depositInput').value);
+      totalMonths = Math.max(1, parseInt(document.getElementById('monthsInput').value, 10) || 12);
+      const rateDecimal = ratePercent / 100;
+
+      const totalDays = totalMonths * 20; // 20 jours ouvrés par mois
+
+      simulationData = [];
+
+      // Jour 0 : Départ
+      simulationData.push({
+        dayIndex: 0,
+        ratePercent: ratePercent,
+        investedDepositValue: deposit,
+        balance: deposit * 24,
+        brutGain: 0,
+        netGain: 0,
+        isStart: true
+      });
+
+      let balance = deposit * 24;
+      let investedDepositValue = deposit;
+
+      for (let day = 1; day <= totalDays; day++) {
+        const brutGain = balance * rateDecimal;
+        const netGain = brutGain * 0.70;
+        const amplifiedGain = netGain * 24;
+
+        investedDepositValue += netGain;
+        balance += amplifiedGain;
+
+        simulationData.push({
+          dayIndex: day,
+          ratePercent: ratePercent,
+          investedDepositValue: investedDepositValue,
+          balance: balance,
+          brutGain: brutGain,
+          netGain: netGain,
+          isStart: false
+        });
+      }
+
+      // Mise à jour des options du sélecteur de mois
+      const monthSelect = document.getElementById('monthSelect');
+      const previouslySelected = parseInt(monthSelect.value, 10) || 1;
+      
+      monthSelect.innerHTML = '';
+      for (let m = 1; m <= totalMonths; m++) {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = `Mois ${m}`;
+        monthSelect.appendChild(opt);
+      }
+
+      if (previouslySelected <= totalMonths) {
+        monthSelect.value = previouslySelected;
+      } else {
+        monthSelect.value = 1;
+      }
+
+      renderActiveMonth();
+    }
+
+    function renderActiveMonth() {
+      const monthSelect = document.getElementById('monthSelect');
+      const selectedMonth = parseInt(monthSelect.value, 10) || 1;
+
+      const tableBody = document.getElementById('tableBody');
+      const mobileList = document.getElementById('mobileList');
+      const summary = document.getElementById('summary');
+
+      tableBody.innerHTML = '';
+      mobileList.innerHTML = '';
+
+      // Calcul des plages de jours de la simulation pour le mois sélectionné
+      const startDay = (selectedMonth - 1) * 20 + 1;
+      const endDay = selectedMonth * 20;
+
+      // Affichage du point de départ uniquement sur le Mois 1
+      if (selectedMonth === 1) {
+        const d0 = simulationData[0];
+        addDesktopRow(`
+          <tr>
+            <td><strong>Départ</strong></td>
+            <td>${formatPercent(d0.ratePercent)}</td>
+            <td>${formatCurrency(d0.investedDepositValue)}</td>
+            <td>${formatCurrency(d0.balance)}</td>
+            <td class="blank">—</td>
+            <td class="blank">—</td>
+            <td class="blank">—</td>
+          </tr>
+        `);
+        addMobileCard('Départ', d0.ratePercent, d0.investedDepositValue, d0.balance, 0, 0, true);
+      }
+
+      const weekDaysNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+
+      for (let day = startDay; day <= endDay; day++) {
+        if (day >= simulationData.length) break;
+        const data = simulationData[day];
+
+        // Calcul des détails du jour ouvré
+        const dayInMonth = day - (selectedMonth - 1) * 20; // De 1 à 20
+        const weekNum = Math.floor((dayInMonth - 1) / 5) + 1; // De 1 à 4
+        const dayOfWeekIndex = (dayInMonth - 1) % 5;
+        const dayOfWeekName = weekDaysNames[dayOfWeekIndex];
+
+        const displayLabel = `M${selectedMonth} - S${weekNum} - ${dayOfWeekName} (J${day})`;
+
+        addDesktopRow(`
+          <tr>
+            <td><strong>${displayLabel}</strong></td>
+            <td>${formatPercent(data.ratePercent)}</td>
+            <td>${formatCurrency(data.investedDepositValue)}</td>
+            <td>${formatCurrency(data.balance)}</td>
+            <td class="blank">—</td>
+            <td class="gain-brut"><strong>${formatCurrency(data.brutGain)}</strong></td>
+            <td class="gain-net"><strong>${formatCurrency(data.netGain)}</strong></td>
+          </tr>
+        `);
+        addMobileCard(displayLabel, data.ratePercent, data.investedDepositValue, data.balance, data.brutGain, data.netGain, false);
+      }
+
+      // Récupération des données pour l'affichage de synthèse
+      const selectedMonthEndDay = Math.min(endDay, simulationData.length - 1);
+      const selMonthData = simulationData[selectedMonthEndDay];
+      const lastDayData = simulationData[simulationData.length - 1];
+
+      summary.innerHTML = `
+        <div class="summary-card">
+          <div class="label">Fin du Mois ${selectedMonth} - Dépôt investi</div>
+          <div class="value">${formatCurrency(selMonthData.investedDepositValue)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Fin du Mois ${selectedMonth} - Balance amplifiée</div>
+          <div class="value">${formatCurrency(selMonthData.balance)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Total Global - Dépôt investi</div>
+          <div class="value" style="color: var(--blue);">${formatCurrency(lastDayData.investedDepositValue)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Total Global - Balance amplifiée</div>
+          <div class="value" style="color: var(--blue);">${formatCurrency(lastDayData.balance)}</div>
+        </div>
+      `;
+    }
+
+    function resetDefaults() {
+      document.getElementById('rateInput').value = '0,045';
+      document.getElementById('depositInput').value = '250';
+      document.getElementById('monthsInput').value = '12';
+      generateTable();
+    }
+
+    // Premier calcul au chargement
+    generateTable();
+  </script>
+</body>
+</html>
