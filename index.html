@@ -78,7 +78,7 @@
 
     .controls {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
       margin-top: 14px;
     }
@@ -150,7 +150,7 @@
 
     .summary {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
 
@@ -169,7 +169,7 @@
     }
 
     .summary-card .value {
-      font-size: 22px;
+      font-size: 21px;
       font-weight: 800;
       line-height: 1.15;
       word-break: break-word;
@@ -185,7 +185,7 @@
 
     table {
       width: 100%;
-      min-width: 1040px;
+      min-width: 1150px;
       border-collapse: collapse;
     }
 
@@ -286,7 +286,7 @@
       <h1>COPY-TRADING</h1>
       <div class="subtitle">
         Application de simulation par périodes mensuelles (20 jours de semaine / ouvrés par mois) avec effet multiplicateur x24 sur la balance.
-        La balance évolue avec le gain brut du jour multiplié par 24. Le gain net affiche le brut avec une déduction de 30 %.
+        La balance évolue avec le gain brut du jour réinvesti multiplié par 24. Le gain net affiche le brut avec une déduction de 30 %.
       </div>
       <div class="install-tip">
         Sur iPhone 11 : ouvrez ce fichier dans Safari, puis utilisez <strong>Partager</strong> → <strong>Sur l’écran d’accueil</strong> pour le lancer comme une application.
@@ -306,6 +306,10 @@
           <input id="monthsInput" type="number" inputmode="numeric" min="1" max="60" value="12" />
         </div>
         <div class="field">
+          <label for="reinvestRateInput">Part réinvestie des gains (%)</label>
+          <input id="reinvestRateInput" type="text" inputmode="decimal" value="100" placeholder="Exemple : 70" />
+        </div>
+        <div class="field" style="grid-column: span 1;">
           <label for="monthSelect">Mois à afficher</label>
           <select id="monthSelect" onchange="renderActiveMonth()"></select>
         </div>
@@ -329,9 +333,10 @@
             <th>PROFITS TRADING Taux moyen par jour</th>
             <th>Dépôt investi</th>
             <th>Balance amplifiée TM</th>
-            <th>RSI</th>
             <th>Gains Brut</th>
             <th>Gains Net</th>
+            <th>Réinvesti (Net)</th>
+            <th>Retiré (Net)</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -342,7 +347,7 @@
 
     <div class="panel">
       <div class="note">
-        Exemple : dépôt de 250 $, balance de départ 6 000 $. Si le gain brut du jour vaut 2,70 $, le capital total augmente alors de 2,70 $ pour afficher 6 002,70 $, tandis que la balance amplifiée augmente de 45,36 $ car le gain net de 1,89 $ est amplifié 24 fois.
+        Exemple : dépôt de 250 $, balance de départ 6 000 $. Si vous décidez de ne réinvestir qu'une partie du gain net journalier (ex: 70 %), seul ce montant est réinvesti et multiplié par 24 dans la balance amplifiée. L'autre partie (30 %) constitue vos retraits réels non réinvestis.
       </div>
     </div>
   </div>
@@ -376,10 +381,11 @@
       document.getElementById('tableBody').insertAdjacentHTML('beforeend', html);
     }
 
-    function addMobileCard(dayLabel, ratePercent, deposit, balance, brutGain, netGain, isStart) {
-      const rsiText = '—';
+    function addMobileCard(dayLabel, ratePercent, deposit, balance, brutGain, netGain, reinvested, withdrawn, isStart) {
       const brutText = isStart ? '—' : formatCurrency(brutGain);
       const netText = isStart ? '—' : formatCurrency(netGain);
+      const reinvestedText = isStart ? '—' : formatCurrency(reinvested);
+      const withdrawnText = isStart ? '—' : formatCurrency(withdrawn);
       const card = `
         <div class="day-card">
           <div class="day-title">${dayLabel}</div>
@@ -392,14 +398,17 @@
             <div class="k">Balance amplifiée TM</div>
             <div class="v">${formatCurrency(balance)}</div>
 
-            <div class="k">RSI</div>
-            <div class="v blank">${rsiText}</div>
-
             <div class="k">Gains Brut</div>
             <div class="v ${isStart ? 'blank' : 'gain-brut'}">${brutText}</div>
 
             <div class="k">Gains Net</div>
             <div class="v ${isStart ? 'blank' : 'gain-net'}">${netText}</div>
+
+            <div class="k">Réinvesti (Net)</div>
+            <div class="v ${isStart ? 'blank' : 'gain-net'}" style="color: var(--greenText);">${reinvestedText}</div>
+
+            <div class="k">Retiré (Net)</div>
+            <div class="v ${isStart ? 'blank' : 'gain-brut'}" style="color: var(--blue);">${withdrawnText}</div>
           </div>
         </div>
       `;
@@ -410,7 +419,10 @@
       const ratePercent = parseFrenchNumber(document.getElementById('rateInput').value);
       const deposit = parseFrenchNumber(document.getElementById('depositInput').value);
       totalMonths = Math.max(1, parseInt(document.getElementById('monthsInput').value, 10) || 12);
+      const reinvestRatePercent = Math.min(100, Math.max(0, parseFrenchNumber(document.getElementById('reinvestRateInput').value) || 100));
       const rateDecimal = ratePercent / 100;
+      const reinvestFactor = reinvestRatePercent / 100;
+      const withdrawFactor = 1 - reinvestFactor;
 
       const totalDays = totalMonths * 20; // 20 jours ouvrés par mois
 
@@ -424,6 +436,8 @@
         balance: deposit * 24,
         brutGain: 0,
         netGain: 0,
+        reinvestedNetGain: 0,
+        withdrawnNetGain: 0,
         isStart: true
       });
 
@@ -432,11 +446,16 @@
 
       for (let day = 1; day <= totalDays; day++) {
         const brutGain = balance * rateDecimal;
-        const netGain = brutGain * 0.70;
-        const amplifiedGain = netGain * 24;
+        const netGain = brutGain * 0.70; // Déduction de 30% sur le brut
+        
+        // Séparation de la part réinvestie et de la part retirée
+        const reinvestedNetGain = netGain * reinvestFactor;
+        const withdrawnNetGain = netGain * withdrawFactor;
+        
+        const amplifiedReinvestedGain = reinvestedNetGain * 24;
 
-        investedDepositValue += netGain;
-        balance += amplifiedGain;
+        investedDepositValue += reinvestedNetGain;
+        balance += amplifiedReinvestedGain;
 
         simulationData.push({
           dayIndex: day,
@@ -445,6 +464,8 @@
           balance: balance,
           brutGain: brutGain,
           netGain: netGain,
+          reinvestedNetGain: reinvestedNetGain,
+          withdrawnNetGain: withdrawnNetGain,
           isStart: false
         });
       }
@@ -497,9 +518,10 @@
             <td class="blank">—</td>
             <td class="blank">—</td>
             <td class="blank">—</td>
+            <td class="blank">—</td>
           </tr>
         `);
-        addMobileCard('Départ', d0.ratePercent, d0.investedDepositValue, d0.balance, 0, 0, true);
+        addMobileCard('Départ', d0.ratePercent, d0.investedDepositValue, d0.balance, 0, 0, 0, 0, true);
       }
 
       const weekDaysNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
@@ -522,12 +544,27 @@
             <td>${formatPercent(data.ratePercent)}</td>
             <td>${formatCurrency(data.investedDepositValue)}</td>
             <td>${formatCurrency(data.balance)}</td>
-            <td class="blank">—</td>
             <td class="gain-brut"><strong>${formatCurrency(data.brutGain)}</strong></td>
             <td class="gain-net"><strong>${formatCurrency(data.netGain)}</strong></td>
+            <td style="color: var(--greenText);"><strong>${formatCurrency(data.reinvestedNetGain)}</strong></td>
+            <td style="color: var(--blue);"><strong>${formatCurrency(data.withdrawnNetGain)}</strong></td>
           </tr>
         `);
-        addMobileCard(displayLabel, data.ratePercent, data.investedDepositValue, data.balance, data.brutGain, data.netGain, false);
+        addMobileCard(displayLabel, data.ratePercent, data.investedDepositValue, data.balance, data.brutGain, data.netGain, data.reinvestedNetGain, data.withdrawnNetGain, false);
+      }
+
+      // Calcul cumulatif des retraits du mois sélectionné
+      let monthWithdrawalsSum = 0;
+      for (let day = startDay; day <= endDay; day++) {
+        if (day < simulationData.length) {
+          monthWithdrawalsSum += simulationData[day].withdrawnNetGain;
+        }
+      }
+
+      // Calcul cumulatif global de tous les retraits jusqu'à la fin de la simulation
+      let globalWithdrawalsSum = 0;
+      for (let day = 1; day < simulationData.length; day++) {
+        globalWithdrawalsSum += simulationData[day].withdrawnNetGain;
       }
 
       // Récupération des données pour l'affichage de synthèse
@@ -545,12 +582,20 @@
           <div class="value">${formatCurrency(selMonthData.balance)}</div>
         </div>
         <div class="summary-card">
-          <div class="label">Total Global - Dépôt investi</div>
-          <div class="value" style="color: var(--blue);">${formatCurrency(lastDayData.investedDepositValue)}</div>
+          <div class="label">Fin du Mois ${selectedMonth} - Retraits du mois</div>
+          <div class="value" style="color: var(--blue);">${formatCurrency(monthWithdrawalsSum)}</div>
         </div>
-        <div class="summary-card">
-          <div class="label">Total Global - Balance amplifiée</div>
-          <div class="value" style="color: var(--blue);">${formatCurrency(lastDayData.balance)}</div>
+        <div class="summary-card" style="border-color: rgba(56, 189, 248, 0.4);">
+          <div class="label">Total Global - Dépôt investi final</div>
+          <div class="value">${formatCurrency(lastDayData.investedDepositValue)}</div>
+        </div>
+        <div class="summary-card" style="border-color: rgba(56, 189, 248, 0.4);">
+          <div class="label">Total Global - Balance finale</div>
+          <div class="value">${formatCurrency(lastDayData.balance)}</div>
+        </div>
+        <div class="summary-card" style="border-color: rgba(56, 189, 248, 0.4);">
+          <div class="label">Total Global - Cumul des retraits</div>
+          <div class="value" style="color: var(--blue);">${formatCurrency(globalWithdrawalsSum)}</div>
         </div>
       `;
     }
@@ -559,6 +604,7 @@
       document.getElementById('rateInput').value = '0,045';
       document.getElementById('depositInput').value = '250';
       document.getElementById('monthsInput').value = '12';
+      document.getElementById('reinvestRateInput').value = '100';
       generateTable();
     }
 
